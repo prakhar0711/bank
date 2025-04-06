@@ -185,7 +185,27 @@ app.get("/api/customer/:id/accounts", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+app.get("/api/customer/:id", authenticateToken, async (req, res) => {
+  try {
+    // Check authorization
+    if (req.user.role !== "Employee" && req.user.id != req.params.id) {
+      return res.status(403).json({ message: "Unauthorized access" });
+    }
 
+    const [rows] = await pool.query(
+      `SELECT Name, DateOfBirth, PhoneNumber, Email,
+              AddressID
+       FROM Customer 
+       WHERE Name = ?`,
+      [req.params.name]
+    );
+
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 // Get account transactions
 app.get(
   "/api/account/:accountNumber/transactions",
@@ -305,7 +325,147 @@ app.get("/api/customers", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// For employees: Get all loans
+app.get("/api/loans", authenticateToken, async (req, res) => {
+  try {
+    // Only employees can access this endpoint
+    if (req.user.role !== "Employee") {
+      return res.status(403).json({ message: "Unauthorized access" });
+    }
 
+    const [rows] = await pool.query(
+      `SELECT l.LoanID, l.LoanType, l.Amount, l.InterestRate, l.DurationMonths, 
+              c.Name as CustomerName, c.CustomerID
+       FROM Loan l
+       JOIN Customer c ON l.CustomerID = c.CustomerID
+       ORDER BY l.LoanID DESC`
+    );
+
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// For employees: Update loan status (approve/reject)
+app.put("/api/loans/:id", authenticateToken, async (req, res) => {
+  try {
+    // Only employees can access this endpoint
+    if (req.user.role !== "Employee") {
+      return res.status(403).json({ message: "Unauthorized access" });
+    }
+
+    const { status } = req.body;
+    const loanId = req.params.id;
+
+    // Start a transaction
+    const connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    try {
+      // Update the loan status
+      await connection.query("UPDATE Loan SET Status = ? WHERE LoanID = ?", [
+        status,
+        loanId,
+      ]);
+
+      // Log the action
+      await connection.query(
+        "INSERT INTO AuditLog (EmployeeID, ActionPerformed, DateTime) VALUES (?, ?, NOW())",
+        [req.user.id, `${status} loan application #${loanId}`]
+      );
+
+      await connection.commit();
+      res.status(200).json({ message: "Loan status updated successfully" });
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// For employees: Get loan details
+app.get("/api/loans/:id", authenticateToken, async (req, res) => {
+  try {
+    // Check authorization
+    if (req.user.role !== "Employee" && req.user.role !== "customer") {
+      return res.status(403).json({ message: "Unauthorized access" });
+    }
+
+    const [rows] = await pool.query(
+      `SELECT l.LoanID, l.LoanType, l.Amount, l.InterestRate, l.DurationMonths, 
+               l.DateApplied, c.Name as CustomerName, c.CustomerID
+       FROM Loan l
+       JOIN Customer c ON l.CustomerID = c.CustomerID
+       WHERE l.LoanID = ?`,
+      [req.params.id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Loan not found" });
+    }
+
+    // If customer is accessing, ensure they can only see their own loans
+    if (req.user.role === "customer" && req.user.id != rows[0].CustomerID) {
+      return res.status(403).json({ message: "Unauthorized access" });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// For employees: Get audit logs
+app.get("/api/audit-logs", authenticateToken, async (req, res) => {
+  try {
+    // Only employees can access this endpoint
+    if (req.user.role !== "Employee") {
+      return res.status(403).json({ message: "Unauthorized access" });
+    }
+
+    const [rows] = await pool.query(
+      `SELECT a.LogID, a.ActionPerformed, a.DateTime, e.Name as EmployeeName
+       FROM AuditLog a
+       JOIN Employee e ON a.EmployeeID = e.EmployeeID
+       ORDER BY a.DateTime DESC`
+    );
+
+    res.status(200).json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// For employees: Create audit log entry
+app.post("/api/audit-logs", authenticateToken, async (req, res) => {
+  try {
+    // Only employees can access this endpoint
+    if (req.user.role !== "Employee") {
+      return res.status(403).json({ message: "Unauthorized access" });
+    }
+
+    const { actionPerformed } = req.body;
+
+    await pool.query(
+      "INSERT INTO AuditLog (EmployeeID, ActionPerformed, DateTime) VALUES (?, ?, NOW())",
+      [req.user.id, actionPerformed]
+    );
+
+    res.status(201).json({ message: "Audit log created successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 // For employees: Create transaction
 app.post("/api/transactions", authenticateToken, async (req, res) => {
   try {
@@ -355,7 +515,37 @@ app.post("/api/transactions", authenticateToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+app.get("/api/customer", authenticateToken, async (req, res) => {
+  try {
+    const { name } = req.query;
+    let query = "SELECT * FROM Customer";
+    let params = [];
 
+    // If name parameter is provided, filter by name
+    if (name) {
+      query += " WHERE Name LIKE ?";
+      params.push(`%${name}%`); // Using LIKE for partial matches
+    }
+
+    const [rows] = await pool.execute(query, params);
+
+    // If looking for a specific name and exact match is preferred
+    if (name && name.trim() !== "") {
+      const exactMatch = rows.find(
+        (customer) => customer.Name.toLowerCase() === name.toLowerCase()
+      );
+
+      if (exactMatch) {
+        return res.json([exactMatch]);
+      }
+    }
+
+    return res.json(rows);
+  } catch (error) {
+    console.error("Error fetching customers:", error);
+    res.status(500).json({ message: "Failed to fetch customers" });
+  }
+});
 // Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

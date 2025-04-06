@@ -267,7 +267,7 @@ const EmployeeDashboard = () => {
                     <td>{customer.PhoneNumber}</td>
                     <td>
                       <Link
-                        to={`/customer/details/${customer.CustomerID}`}
+                        to={`/customer/details/${customer.Name}`}
                         className="btn btn-primary"
                       >
                         View Details
@@ -297,8 +297,6 @@ const EmployeeDashboard = () => {
                   <th>Amount</th>
                   <th>Interest Rate</th>
                   <th>Duration</th>
-                  <th>Status</th>
-                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -310,39 +308,6 @@ const EmployeeDashboard = () => {
                     <td>${parseFloat(loan.Amount).toFixed(2)}</td>
                     <td>{loan.InterestRate}%</td>
                     <td>{loan.DurationMonths} months</td>
-                    <td>
-                      <span
-                        className={`status-badge status-${loan.Status.toLowerCase()}`}
-                      >
-                        {loan.Status || "Pending"}
-                      </span>
-                    </td>
-                    <td>
-                      {(!loan.Status || loan.Status === "Pending") && (
-                        <div className="action-buttons">
-                          <button
-                            className="btn btn-success btn-sm"
-                            onClick={() => handleApproveLoan(loan.LoanID, true)}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() =>
-                              handleApproveLoan(loan.LoanID, false)
-                            }
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      )}
-                      <Link
-                        to={`/loan/details/${loan.LoanID}`}
-                        className="btn btn-info btn-sm"
-                      >
-                        Details
-                      </Link>
-                    </td>
                   </tr>
                 ))}
               </tbody>

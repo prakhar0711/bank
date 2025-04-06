@@ -13,6 +13,7 @@ import CustomerDashboard from "./pages/CustomerDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import AccountDetails from "./pages/AccountDetails";
 import ProtectedRoute from "./components/ProtectedRoute";
+import CustomerDetails from "./pages/CustomerDetails";
 
 function App() {
   return (
@@ -47,6 +48,10 @@ function App() {
               }
             />
             <Route path="/" element={<Navigate to="/login" />} />
+            <Route
+              path="/customer/details/:name"
+              element={<CustomerDetails />}
+            />
           </Routes>
         </div>
       </Router>
