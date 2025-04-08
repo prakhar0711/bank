@@ -1,62 +1,107 @@
-// src/App.js
-import React from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import Header from "./components/Header";
-import Login from "./pages/Login";
-import CustomerDashboard from "./pages/CustomerDashboard";
-import EmployeeDashboard from "./pages/EmployeeDashboard";
-import AccountDetails from "./pages/AccountDetails";
-import ProtectedRoute from "./components/ProtectedRoute";
-import CustomerDetails from "./pages/CustomerDetails";
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import Navbar from './components/Navbar';
+import Login from './components/Login';
+import Register from './components/Register';
+import CustomerDashboard from './components/CustomerDashboard';
+import EmployeeDashboard from './components/EmployeeDashboard';
+import AccountDetails from './components/AccountDetails';
+import Transactions from './components/Transactions';
+import LoanDetails from './components/LoanDetails';
+import LoanProducts from './components/LoanProducts';
+
+const theme = createTheme({
+  palette: {
+    mode: 'light',
+    primary: {
+      main: '#1976d2',
+    },
+    secondary: {
+      main: '#dc004e',
+    },
+  },
+});
+
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  return children;
+};
+
+const DashboardRoute = () => {
+  const { user } = useAuth();
+  
+  if (user.role === 'employee') {
+    return <EmployeeDashboard />;
+  }
+  
+  return <CustomerDashboard />;
+};
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Header />
-        <div className="container">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/customer/dashboard"
-              element={
-                <ProtectedRoute requiredRole="customer">
-                  <CustomerDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/employee/dashboard"
-              element={
-                <ProtectedRoute requiredRole="Employee">
-                  <EmployeeDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/account/:accountNumber"
-              element={
-                <ProtectedRoute>
-                  <AccountDetails />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/" element={<Navigate to="/login" />} />
-            <Route
-              path="/customer/details/:name"
-              element={<CustomerDetails />}
-            />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AuthProvider>
+        <Navbar />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <DashboardRoute />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/account/:id"
+            element={
+              <ProtectedRoute>
+                <AccountDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/transactions/:accountId"
+            element={
+              <ProtectedRoute>
+                <Transactions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/loans/:id"
+            element={
+              <ProtectedRoute>
+                <LoanDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/loan_products"
+            element={
+              <ProtectedRoute>
+                <LoanProducts />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
-export default App;
+export default App; 

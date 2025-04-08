@@ -1,14 +1,24 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import "./index.css";
-import App from "./App";
-import reportWebVitals from "./reportWebVitals";
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import App from './App';
+import theme from './theme';
+import { AuthProvider } from './contexts/AuthContext';
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
+const container = document.getElementById('root');
+const root = createRoot(container);
+
 root.render(
   <React.StrictMode>
-    <App />
+    <BrowserRouter>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   </React.StrictMode>
-);
-
-reportWebVitals();
+); 
