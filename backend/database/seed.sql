@@ -1,3 +1,11 @@
+-- Insert dummy addresses
+INSERT INTO addresses (street, city, state, postal_code, country, created_at) VALUES
+('123 Main St', 'New York', 'NY', '10001', 'USA', '2024-01-01 08:00:00'),
+('456 Oak Ave', 'Los Angeles', 'CA', '90001', 'USA', '2024-01-01 09:00:00'),
+('789 Pine Rd', 'Chicago', 'IL', '60601', 'USA', '2024-01-02 09:00:00'),
+('321 Bank St', 'Boston', 'MA', '02108', 'USA', '2024-01-01 10:00:00'),
+('654 Finance Ave', 'San Francisco', 'CA', '94105', 'USA', '2024-01-02 11:00:00');
+
 -- Insert dummy users (admin, employees, and customers)
 INSERT INTO users (username, email, password, role, created_at) VALUES
 ('admin', 'admin@bank.com', 'admin123', 'admin', '2024-01-01 08:00:00'),
@@ -8,22 +16,22 @@ INSERT INTO users (username, email, password, role, created_at) VALUES
 ('bob_wilson', 'bob@example.com', 'password123', 'customer', '2024-01-03 12:00:00');
 
 -- Insert dummy employees
-INSERT INTO employees (user_id, first_name, last_name, date_of_birth, address, phone, email, position, department, hire_date, created_at) VALUES
-(2, 'Sarah', 'Johnson', '1985-05-15', '321 Bank St, City', '1112223333', 'sarah@bank.com', 'Loan Officer', 'Loans', '2023-01-15', '2024-01-01 09:00:00'),
-(3, 'Mike', 'Brown', '1990-08-22', '654 Finance Ave, Town', '4445556666', 'mike@bank.com', 'Account Manager', 'Customer Service', '2023-03-10', '2024-01-02 09:00:00');
+INSERT INTO employees (user_id, first_name, last_name, date_of_birth, address_id, phone, email, position, department, hire_date, created_at) VALUES
+(2, 'Sarah', 'Johnson', '1985-05-15', 4, '1112223333', 'sarah@bank.com', 'Loan Officer', 'Loans', '2023-01-15', '2024-01-01 09:00:00'),
+(3, 'Mike', 'Brown', '1990-08-22', 5, '4445556666', 'mike@bank.com', 'Account Manager', 'Customer Service', '2023-03-10', '2024-01-02 09:00:00');
 
 -- Insert dummy customers
-INSERT INTO customers (user_id, first_name, last_name, date_of_birth, address, phone, email, created_at) VALUES
-(4, 'John', 'Doe', '1992-03-10', '123 Main St, City', '1234567890', 'john@example.com', '2024-01-01 10:00:00'),
-(5, 'Jane', 'Smith', '1988-07-25', '456 Oak Ave, Town', '0987654321', 'jane@example.com', '2024-01-02 11:00:00'),
-(6, 'Bob', 'Wilson', '1995-11-30', '789 Pine Rd, Village', '5555555555', 'bob@example.com', '2024-01-03 12:00:00');
+INSERT INTO customers (user_id, first_name, last_name, date_of_birth, address_id, phone, email, created_at) VALUES
+(4, 'John', 'Doe', '1992-03-10', 1, '1234567890', 'john@example.com', '2024-01-01 10:00:00'),
+(5, 'Jane', 'Smith', '1988-07-25', 2, '0987654321', 'jane@example.com', '2024-01-02 11:00:00'),
+(6, 'Bob', 'Wilson', '1995-11-30', 3, '5555555555', 'bob@example.com', '2024-01-03 12:00:00');
 
 -- Insert dummy accounts
 INSERT INTO accounts (customer_id, account_number, account_type, balance, status, created_at) VALUES
 (1, 'ACC001', 'savings', 5000.00, 'active', '2024-01-01 10:30:00'),
-(1, 'ACC002', 'checking', 2500.00, 'active', '2024-01-01 10:35:00'),
+(1, 'ACC002', 'current', 2500.00, 'active', '2024-01-01 10:35:00'),
 (2, 'ACC003', 'savings', 10000.00, 'active', '2024-01-02 11:30:00'),
-(3, 'ACC004', 'checking', 1500.00, 'active', '2024-01-03 12:30:00');
+(3, 'ACC004', 'current', 1500.00, 'active', '2024-01-03 12:30:00');
 
 -- Insert dummy transactions
 INSERT INTO transactions (account_id, transaction_type, amount, description, status, created_at) VALUES

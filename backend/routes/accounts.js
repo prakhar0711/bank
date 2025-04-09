@@ -36,7 +36,7 @@ const authenticateToken = (req, res, next) => {
 // Create new account
 router.post('/', [
   authenticateToken,
-  body('account_type').isIn(['savings', 'checking']),
+  body('account_type').isIn(['savings', 'current']),
   body('initial_deposit').isFloat({ min: 0 })
 ], async (req, res) => {
   try {

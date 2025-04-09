@@ -75,6 +75,7 @@ const EmployeeDashboard = () => {
         }
       });
       setLoans(loansResponse.data);
+      console.log(loans);
     } catch (error) {
       setError('Failed to fetch data');
       console.error('API Error:', error);
@@ -191,7 +192,7 @@ const EmployeeDashboard = () => {
                       <TableRow key={loan.id}>
                         <TableCell>{loan.id}</TableCell>
                         <TableCell>
-                          {loan.customer ? `${loan.customer.first_name} ${loan.customer.last_name}` : 'N/A'}
+                          {loan ? `${loan.first_name} ${loan.last_name}` : 'N/A'}
                         </TableCell>
                         <TableCell>
                           {loan.loan_type.charAt(0).toUpperCase() + loan.loan_type.slice(1)}
@@ -302,12 +303,12 @@ const EmployeeDashboard = () => {
                 <Typography variant="h6" sx={{ mt: 2 }}>Customer Information</Typography>
               </Grid>
               <Grid item xs={12} md={6}>
-                <Typography><strong>Name:</strong> {selectedLoan.customer ? `${selectedLoan.customer.first_name} ${selectedLoan.customer.last_name}` : 'N/A'}</Typography>
-                <Typography><strong>Email:</strong> {selectedLoan.customer?.email || 'N/A'}</Typography>
+                <Typography><strong>Name:</strong> {selectedLoan? `${selectedLoan.first_name} ${selectedLoan.last_name}` : 'N/A'}</Typography>
+                <Typography><strong>Email:</strong> {selectedLoan?.email || 'N/A'}</Typography>
               </Grid>
               <Grid item xs={12} md={6}>
-                <Typography><strong>Phone:</strong> {selectedLoan.customer?.phone || 'N/A'}</Typography>
-                <Typography><strong>Address:</strong> {selectedLoan.customer?.address || 'N/A'}</Typography>
+                <Typography><strong>Phone:</strong> {selectedLoan?.phone || 'N/A'}</Typography>
+                <Typography><strong>Address:</strong> {selectedLoan?`${selectedLoan.street}, ${selectedLoan.city}, ${selectedLoan.state}, ${selectedLoan.postal_code}, ${selectedLoan.country}`:'N/A'}</Typography>
               </Grid>
             </Grid>
           )}
@@ -348,9 +349,8 @@ const EmployeeDashboard = () => {
                 <Typography><strong>Phone:</strong> {selectedCustomer.phone}</Typography>
               </Grid>
               <Grid item xs={12} md={6}>
-                <Typography><strong>Address:</strong> {selectedCustomer.address || 'N/A'}</Typography>
+                <Typography><strong>Address:</strong> {selectedCustomer.street}, {selectedCustomer.city}, {selectedCustomer.state} {selectedCustomer.postal_code}, {selectedCustomer.country}</Typography>
                 <Typography><strong>Date of Birth:</strong> {selectedCustomer.date_of_birth ? new Date(selectedCustomer.date_of_birth).toLocaleDateString() : 'N/A'}</Typography>
-                <Typography><strong>Gender:</strong> {selectedCustomer.gender || 'N/A'}</Typography>
               </Grid>
 
               <Grid item xs={12}>

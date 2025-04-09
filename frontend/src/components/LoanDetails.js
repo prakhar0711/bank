@@ -111,20 +111,20 @@ const LoanDetails = () => {
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Button
         variant="outlined"
-        onClick={() => navigate('/loans')}
+        onClick={() => navigate('/')}
         sx={{ mb: 3 }}
       >
-        Back to Loans
+        Back to Dashboard
       </Button>
 
       <Paper sx={{ p: 3 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
           <Typography variant="h4">
-            {loan.LoanType.charAt(0).toUpperCase() + loan.LoanType.slice(1)} Loan
+            {loan.loan_type.charAt(0).toUpperCase() + loan.loan_type.slice(1)} Loan
           </Typography>
           <Chip
-            label={loan.Status}
-            color={getStatusColor(loan.Status)}
+            label={loan.status}
+            color={getStatusColor(loan.status)}
             size="large"
           />
         </Box>
@@ -136,25 +136,25 @@ const LoanDetails = () => {
             </Typography>
             <Box sx={{ mb: 2 }}>
               <Typography color="textSecondary">Loan ID</Typography>
-              <Typography variant="body1">{loan.LoanID}</Typography>
+              <Typography variant="body1">{loan.id}</Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
               <Typography color="textSecondary">Amount</Typography>
               <Typography variant="body1">
-                ${parseFloat(loan.Amount).toFixed(2)}
+                ${parseFloat(loan.amount).toFixed(2)}
               </Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
               <Typography color="textSecondary">Interest Rate</Typography>
-              <Typography variant="body1">{loan.InterestRate}%</Typography>
+              <Typography variant="body1">{loan.interest_rate}%</Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
               <Typography color="textSecondary">Duration</Typography>
-              <Typography variant="body1">{loan.DurationMonths} months</Typography>
+              <Typography variant="body1">{loan.duration} months</Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
               <Typography color="textSecondary">Application Date</Typography>
-              <Typography variant="body1">{formatDate(loan.ApplicationDate)}</Typography>
+              <Typography variant="body1">{formatDate(loan.created_at)}</Typography>
             </Box>
           </Grid>
 
@@ -165,33 +165,33 @@ const LoanDetails = () => {
             <Box sx={{ mb: 2 }}>
               <Typography color="textSecondary">Monthly Payment</Typography>
               <Typography variant="body1">
-                ${parseFloat(loan.MonthlyPayment).toFixed(2)}
+                ${parseFloat(loan.monthly_payment).toFixed(2)}
               </Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
               <Typography color="textSecondary">Total Interest</Typography>
               <Typography variant="body1">
-                ${parseFloat(loan.TotalInterest).toFixed(2)}
+                ${parseFloat(loan.amount * loan.interest_rate / 100).toFixed(2)}
               </Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
               <Typography color="textSecondary">Total Amount</Typography>
               <Typography variant="body1">
-                ${parseFloat(loan.TotalAmount).toFixed(2)}
+                ${parseFloat(loan.amount + (loan.amount * loan.interest_rate / 100)).toFixed(2)}
               </Typography>
             </Box>
-            {loan.Status === 'approved' && (
+            {loan.status === 'approved' && (
               <Box sx={{ mb: 2 }}>
                 <Typography color="textSecondary">Next Payment Date</Typography>
                 <Typography variant="body1">
-                  {formatDate(loan.NextPaymentDate)}
+                  {formatDate(new Date(loan.created_at).setMonth(new Date(loan.created_at).getMonth() + 1))}
                 </Typography>
               </Box>
             )}
           </Grid>
         </Grid>
 
-        {loan.Status === 'approved' && payments.length > 0 && (
+        {payments && payments.length > 0 && (
           <>
             <Divider sx={{ my: 3 }} />
             <Typography variant="h6" gutterBottom>
@@ -210,15 +210,15 @@ const LoanDetails = () => {
                 </TableHead>
                 <TableBody>
                   {payments.map((payment) => (
-                    <TableRow key={payment.PaymentID}>
-                      <TableCell>{formatDate(payment.PaymentDate)}</TableCell>
-                      <TableCell>${parseFloat(payment.Amount).toFixed(2)}</TableCell>
-                      <TableCell>${parseFloat(payment.Principal).toFixed(2)}</TableCell>
-                      <TableCell>${parseFloat(payment.Interest).toFixed(2)}</TableCell>
+                    <TableRow key={payment.id}>
+                      <TableCell>{formatDate(payment.payment_date)}</TableCell>
+                      <TableCell>${parseFloat(payment.amount).toFixed(2)}</TableCell>
+                      <TableCell>${parseFloat(payment.principal).toFixed(2)}</TableCell>
+                      <TableCell>${parseFloat(payment.interest).toFixed(2)}</TableCell>
                       <TableCell>
                         <Chip
-                          label={payment.Status}
-                          color={payment.Status === 'paid' ? 'success' : 'warning'}
+                          label={payment.status}
+                          color={payment.status === 'paid' ? 'success' : 'warning'}
                           size="small"
                         />
                       </TableCell>

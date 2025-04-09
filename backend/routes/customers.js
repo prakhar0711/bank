@@ -37,15 +37,25 @@ const authenticateToken = (req, res, next) => {
 router.get('/', authenticateToken, async (req, res) => {
   try {
     // Check if user is admin or employee
-    if (req.user.role !== 'admin' && req.user.role !== 'employee') {
-      return res.status(403).json({ message: 'Access denied' });
-    }
+    // if (req.user.role !== 'employee') {
+    //   return res.status(403).json({ message: 'Access denied' });
+    // }
 
-    // First get all customers with their basic info
+    // First get all customers with their basic info and address
     const [customers] = await pool.execute(`
-      SELECT c.*, u.username, u.email, u.role
+      SELECT 
+        c.*, 
+        u.username, 
+        u.email, 
+        u.role,
+        a.street,
+        a.city,
+        a.state,
+        a.postal_code,
+        a.country
       FROM customers c
       JOIN users u ON c.user_id = u.id
+      JOIN addresses a ON c.address_id = a.id
       ORDER BY c.created_at DESC
     `);
 
@@ -84,28 +94,42 @@ router.get('/', authenticateToken, async (req, res) => {
 // Get customer by ID
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const customerId = req.params.id;
+    // Check if user is admin or requesting their own data
+    // if (req.user.role !== 'employee' && req.user.id !== parseInt(req.params.id)) {
+    //   return res.status(403).json({ message: 'Access denied' });
+    // }
 
-    // Check if user is admin or the customer themselves
-    if (req.user.role !== 'admin' && req.user.userId !== parseInt(customerId)) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
+    const [customer] = await pool.query(`
+      SELECT c.*, a.street, a.city, a.state, a.postal_code, a.country
+      FROM customers c
+      LEFT JOIN addresses a ON c.address_id = a.id
+      WHERE c.id = ?
+    `, [req.params.id]);
 
-    const [customers] = await pool.execute(`
-      SELECT c.*, a.Street, a.City, a.State, a.ZipCode, a.Country
-      FROM Customer c
-      JOIN Address a ON c.AddressID = a.AddressID
-      WHERE c.CustomerID = ?
-    `, [customerId]);
-
-    if (customers.length === 0) {
+    if (!customer) {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
-    res.json(customers[0]);
+    // Get customer's accounts
+    const [accounts] = await pool.query(`
+      SELECT * FROM accounts 
+      WHERE customer_id = ?
+    `, [req.params.id]);
+
+    // Get customer's loans
+    const [loans] = await pool.query(`
+      SELECT * FROM loans 
+      WHERE customer_id = ?
+    `, [req.params.id]);
+
+    res.json({
+      ...customer,
+      accounts,
+      loans
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error fetching customer:', error);
+    res.status(500).json({ message: 'Error fetching customer' });
   }
 });
 
@@ -194,8 +218,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const customerId = req.params.id;
 
-    // Check if user is admin or the customer themselves
-    if (req.user.role !== 'admin' && req.user.userId !== parseInt(customerId)) {
+    if ((req.user.role != 'employee' || req.user.role !='customer') && req.user.userId !== parseInt(customerId)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -255,7 +278,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 // Delete customer (admin only)
 router.delete('/:id', authenticateToken, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== 'employee') {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -303,27 +326,41 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Get current customer's data
+// Get current customer's profile
 router.get('/me', authenticateToken, async (req, res) => {
   try {
-    // Check if user is a customer
-    if (req.user.role !== 'customer') {
-      return res.status(403).json({ message: 'Access denied' });
-    }
+    // Get customer ID from user ID
+    const [customer] = await pool.query(`
+      SELECT c.*, a.street, a.city, a.state, a.postal_code, a.country
+      FROM customers c
+      LEFT JOIN addresses a ON c.address_id = a.id
+      WHERE c.user_id = ?
+    `, [req.user.id]);
 
-    const [customers] = await pool.execute(
-      'SELECT * FROM customers WHERE user_id = ?',
-      [req.user.userId]
-    );
-
-    if (customers.length === 0) {
+    if (!customer) {
       return res.status(404).json({ message: 'Customer profile not found' });
     }
 
-    res.json(customers[0]);
+    // Get customer's accounts
+    const [accounts] = await pool.query(`
+      SELECT * FROM accounts 
+      WHERE customer_id = ?
+    `, [customer.id]);
+
+    // Get customer's loans
+    const [loans] = await pool.query(`
+      SELECT * FROM loans 
+      WHERE customer_id = ?
+    `, [customer.id]);
+
+    res.json({
+      ...customer,
+      accounts,
+      loans
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error fetching customer profile:', error);
+    res.status(500).json({ message: 'Error fetching customer profile' });
   }
 });
 

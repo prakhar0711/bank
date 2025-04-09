@@ -84,7 +84,7 @@ const AccountDetails = () => {
           <Grid item xs={12} md={6}>
             <Typography variant="h6" gutterBottom>Account Information</Typography>
             <Typography><strong>Account Number:</strong> {account.account_number}</Typography>
-            <Typography><strong>Type:</strong> {account.account_type}</Typography>
+            <Typography><strong>Type:</strong> {account.account_type === 'current' ? 'Current' : account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1)}</Typography>
             <Typography><strong>Balance:</strong> ${parseFloat(account.balance).toFixed(2)}</Typography>
           </Grid>
           <Grid item xs={12} md={6}>

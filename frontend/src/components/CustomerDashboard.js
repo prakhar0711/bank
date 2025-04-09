@@ -29,6 +29,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { jwtDecode } from 'jwt-decode';
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
@@ -36,7 +37,7 @@ const CustomerDashboard = () => {
   const [accounts, setAccounts] = useState([]);
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
   const [openNewAccount, setOpenNewAccount] = useState(false);
   const [openNewLoan, setOpenNewLoan] = useState(false);
   const [openDeposit, setOpenDeposit] = useState(false);
@@ -71,10 +72,63 @@ const CustomerDashboard = () => {
   const [customer, setCustomer] = useState(null);
 
   useEffect(() => {
-    fetchData();
+    const initializeData = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.log('No token found, redirecting to login');
+          navigate('/login');
+          return;
+        }
+
+        const decoded = jwtDecode(token);
+        console.log('Decoded token:', decoded);
+
+        if (!decoded.userId && !decoded.id) {
+          console.log('Invalid token payload, redirecting to login');
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
+        }
+
+        console.log('Fetching customer data for user:', decoded.userId);
+
+        const response = await axios.get(`http://localhost:5000/api/customers/${decoded.userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (response.data) {
+          console.log('Customer data received:', response.data);
+          setCustomer(response.data[0]);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Failed to fetch customer data:', error);
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token');
+          navigate('/login');
+        } else if (error.response?.status === 403) {
+          setError('You do not have permission to access this data');
+        } else if (error.response?.status === 404) {
+          setError('Customer profile not found');
+        } else {
+          setError('Failed to load customer data');
+        }
+        setLoading(false);
+      }
+    };
+
+    initializeData();
     fetchLoanProducts();
-    fetchCustomerData();
-  }, []);
+  }, [navigate]);
+
+  useEffect(() => {
+    if (customer) {
+      fetchData();
+    }
+  }, [customer]);
 
   const fetchData = async () => {
     try {
@@ -93,14 +147,31 @@ const CustomerDashboard = () => {
       }));
       setAccounts(accountsWithNumberBalance);
 
-      // Fetch loans
-      const loansResponse = await axios.get('http://localhost:5000/api/loans', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      setLoans(loansResponse.data);
+      // Only fetch loans if we have customer data
+      console.log("here"+customer);
+      if (customer) {
+        const loansResponse = await axios.get(`http://localhost:5000/api/loans/customer/${customer.id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        console.log(loansResponse);
+        // Format the loans data to match the expected structure
+        const formattedLoans = loansResponse.data.map(loan => ({
+          id: loan.id,
+          loan_type: loan.loanType,
+          amount: loan.amount,
+          interest_rate: loan.interestRate,
+          duration: loan.duration,
+          monthly_payment: loan.monthlyPayment,
+          status: loan.status,
+          created_at: loan.createdAt,
+          product: loan.product
+        }));
+        setLoans(formattedLoans);
+      }
     } catch (error) {
+      console.error('Error fetching data:', error);
       setError('Failed to fetch data');
     } finally {
       setLoading(false);
@@ -118,20 +189,7 @@ const CustomerDashboard = () => {
       setLoanProducts(response.data.filter(product => product.is_active));
     } catch (error) {
       console.error('Failed to fetch loan products:', error);
-    }
-  };
-
-  const fetchCustomerData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/customers/me', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      setCustomer(response.data);
-    } catch (error) {
-      console.error('Failed to fetch customer data:', error);
+      setError('Failed to fetch loan products');
     }
   };
 
@@ -158,19 +216,9 @@ const CustomerDashboard = () => {
 
   const handleLoanProductChange = (e) => {
     const productId = e.target.value;
-    setNewLoanData({
-      ...newLoanData,
-      loan_product_id: productId,
-      amount: '',
-      duration: '',
-    });
-    
-    if (productId) {
-      const product = loanProducts.find(p => p.id === parseInt(productId));
-      setSelectedLoanProduct(product);
-    } else {
-      setSelectedLoanProduct(null);
-    }
+    setNewLoanData({ ...newLoanData, loan_product_id: productId });
+    const product = loanProducts.find(p => p.id === parseInt(productId));
+    setSelectedLoanProduct(product);
   };
 
   const handleLoanSubmit = async (e) => {
@@ -183,15 +231,28 @@ const CustomerDashboard = () => {
       return;
     }
 
+    if (!selectedLoanProduct) {
+      setLoanError('Please select a loan product');
+      return;
+    }
+
+    if (!newLoanData.amount || !newLoanData.duration) {
+      setLoanError('Please fill in all required fields');
+      return;
+    }
+
     try {
       const formData = {
-        customerId: customer.id,
+        customerId: parseInt(customer.id),
         loanType: selectedLoanProduct.loan_type,
         amount: parseFloat(newLoanData.amount),
         duration: parseInt(newLoanData.duration),
         interestRate: parseFloat(selectedLoanProduct.interest_rate),
-        monthlyPayment: parseFloat(newLoanData.amount) / parseInt(newLoanData.duration)
+        monthlyPayment: parseFloat(newLoanData.amount) / parseInt(newLoanData.duration),
+        loan_product_id: parseInt(selectedLoanProduct.id)
       };
+
+      console.log('Submitting loan application with data:', formData);
 
       const response = await axios.post('http://localhost:5000/api/loans', formData, {
         headers: {
@@ -199,9 +260,17 @@ const CustomerDashboard = () => {
         }
       });
 
+      console.log('Loan application response:', response.data);
+
       setLoanSuccess('Loan application submitted successfully!');
       setOpenNewLoan(false);
-      fetchData(); // Use the existing fetchData function to refresh both accounts and loans
+      setNewLoanData({
+        loan_product_id: '',
+        amount: '',
+        duration: ''
+      });
+      setSelectedLoanProduct(null);
+      fetchData();
     } catch (error) {
       console.error('Error submitting loan application:', error);
       setLoanError(error.response?.data?.message || 'Failed to submit loan application');
@@ -410,6 +479,22 @@ const CustomerDashboard = () => {
     );
   }
 
+  if (error) {
+    return (
+      <Container>
+        <Typography>Error: {error}</Typography>
+      </Container>
+    );
+  }
+
+  if (!customer) {
+    return (
+      <Container>
+        <Typography>No customer data found</Typography>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
@@ -456,10 +541,10 @@ const CustomerDashboard = () => {
                         Account #{account.account_number}
                       </Typography>
                       <Typography color="textSecondary">
-                        Type: {account.account_type}
+                        Type: {(account.account_type ? account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1) : 'Unknown')}
                       </Typography>
                       <Typography variant="h5" sx={{ mt: 2 }}>
-                        Balance: ${typeof account.balance === 'number' ? account.balance.toFixed(2) : '0.00'}
+                        Balance: ${(account.balance !== undefined && account.balance !== null) ? parseFloat(account.balance).toFixed(2) : '0.00'}
                       </Typography>
                     </CardContent>
                     <CardActions>
@@ -520,7 +605,7 @@ const CustomerDashboard = () => {
                   label="Account Type"
                 >
                   <MenuItem value="savings">Savings</MenuItem>
-                  <MenuItem value="current">current</MenuItem>
+                  <MenuItem value="current">Current</MenuItem>
                 </Select>
               </FormControl>
               <TextField
@@ -571,7 +656,7 @@ const CustomerDashboard = () => {
                     </MenuItem>
                     {accounts.map((account) => (
                       <MenuItem key={account.id} value={account.id}>
-                        {account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1)} Account #{account.account_number} - ${account.balance.toFixed(2)}
+                        {(account.account_type ? account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1) : 'Unknown')} Account #{account.account_number} - ${(account.balance !== undefined && account.balance !== null) ? parseFloat(account.balance).toFixed(2) : '0.00'}
                       </MenuItem>
                     ))}
                   </Select>
@@ -587,7 +672,7 @@ const CustomerDashboard = () => {
                     sx={{ mb: 2 }}
                     required
                     error={!!targetAccountError}
-                    helperText={targetAccountError || (targetAccount ? `Account found: ${targetAccount.account_type} Account` : '')}
+                    helperText={targetAccountError || (targetAccount ? `Account found: ${targetAccount.account_type ? targetAccount.account_type.charAt(0).toUpperCase() + targetAccount.account_type.slice(1) : 'Unknown'} Account` : '')}
                   />
                 )}
 
@@ -638,7 +723,7 @@ const CustomerDashboard = () => {
                     </MenuItem>
                     {accounts.map((account) => (
                       <MenuItem key={account.id} value={account.id}>
-                        {account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1)} Account #{account.account_number} - ${account.balance.toFixed(2)}
+                        {(account.account_type ? account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1) : 'Unknown')} Account #{account.account_number} - ${(account.balance !== undefined && account.balance !== null) ? parseFloat(account.balance).toFixed(2) : '0.00'}
                       </MenuItem>
                     ))}
                   </Select>
@@ -655,7 +740,7 @@ const CustomerDashboard = () => {
                   inputProps={{ min: "0.01", step: "0.01" }}
                   helperText={
                     withdrawData.account_id && withdrawData.amount
-                      ? `Available balance: $${accounts.find(acc => acc.id === withdrawData.account_id)?.balance.toFixed(2) || '0.00'}`
+                      ? `Available balance: $${(accounts.find(acc => acc.id === withdrawData.account_id)?.balance !== undefined && accounts.find(acc => acc.id === withdrawData.account_id)?.balance !== null) ? parseFloat(accounts.find(acc => acc.id === withdrawData.account_id).balance).toFixed(2) : '0.00'}`
                       : ''
                   }
                 />
@@ -699,7 +784,7 @@ const CustomerDashboard = () => {
                 </Paper>
               </Grid>
             ) : (
-              loans.map((loan) => (
+              loans.map(loan => (
                 <Grid item xs={12} md={6} key={loan.id}>
                   <Card>
                     <CardContent>
@@ -707,7 +792,7 @@ const CustomerDashboard = () => {
                         {loan.loan_type.charAt(0).toUpperCase() + loan.loan_type.slice(1)} Loan
                       </Typography>
                       <Typography color="textSecondary">
-                        Amount: ${loan.amount}
+                        Amount: ${parseFloat(loan.amount).toLocaleString()}
                       </Typography>
                       <Typography color="textSecondary">
                         Interest Rate: {loan.interest_rate}%
@@ -716,8 +801,21 @@ const CustomerDashboard = () => {
                         Duration: {loan.duration} months
                       </Typography>
                       <Typography color="textSecondary">
-                        Status: {loan.status}
+                        Monthly Payment: ${parseFloat(loan.monthly_payment).toLocaleString()}
                       </Typography>
+                      <Typography color="textSecondary">
+                        Status: {loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}
+                      </Typography>
+                      {loan.product && (
+                        <>
+                          <Typography color="textSecondary">
+                            Product: {loan.product.name}
+                          </Typography>
+                          <Typography color="textSecondary">
+                            Description: {loan.product.description}
+                          </Typography>
+                        </>
+                      )}
                     </CardContent>
                     <CardActions>
                       <Button
@@ -812,13 +910,13 @@ const CustomerDashboard = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenNewLoan(false)}>Cancel</Button>
-              <Button 
-                onClick={handleLoanSubmit} 
-                variant="contained" 
+              <Button
+                onClick={handleLoanSubmit}
+                variant="contained"
                 color="primary"
-                disabled={!selectedLoanProduct || !newLoanData.amount || !newLoanData.duration}
+                disabled={!newLoanData.loan_product_id || !newLoanData.amount || !newLoanData.duration}
               >
-                Apply
+                Apply for Loan
               </Button>
             </DialogActions>
           </Dialog>
@@ -828,4 +926,4 @@ const CustomerDashboard = () => {
   );
 };
 
-export default CustomerDashboard; 
+export default CustomerDashboard;

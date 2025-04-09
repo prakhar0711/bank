@@ -13,6 +13,18 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- Addresses table
+CREATE TABLE IF NOT EXISTS addresses (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    street VARCHAR(100) NOT NULL,
+    city VARCHAR(50) NOT NULL,
+    state VARCHAR(50) NOT NULL,
+    postal_code VARCHAR(20) NOT NULL,
+    country VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Employees table
 CREATE TABLE IF NOT EXISTS employees (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -20,7 +32,7 @@ CREATE TABLE IF NOT EXISTS employees (
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     date_of_birth DATE NOT NULL,
-    address TEXT,
+    address_id INT,
     phone VARCHAR(20),
     email VARCHAR(100),
     position VARCHAR(50) NOT NULL,
@@ -28,7 +40,8 @@ CREATE TABLE IF NOT EXISTS employees (
     hire_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (address_id) REFERENCES addresses(id)
 );
 
 -- Customers table
@@ -38,12 +51,13 @@ CREATE TABLE IF NOT EXISTS customers (
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     date_of_birth DATE NOT NULL,
-    address TEXT,
+    address_id INT,
     phone VARCHAR(20),
     email VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (address_id) REFERENCES addresses(id)
 );
 
 -- Accounts table
@@ -51,7 +65,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     id INT PRIMARY KEY AUTO_INCREMENT,
     customer_id INT,
     account_number VARCHAR(20) UNIQUE NOT NULL,
-    account_type ENUM('savings', 'checking', 'fixed') NOT NULL,
+    account_type ENUM('savings', 'current') NOT NULL,
     balance DECIMAL(15, 2) DEFAULT 0.00,
     status ENUM('active', 'inactive', 'frozen') DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

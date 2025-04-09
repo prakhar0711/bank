@@ -22,31 +22,34 @@ const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
   const [formData, setFormData] = useState({
-    // Common fields
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'customer',
-    first_name: '',
-    last_name: '',
-    date_of_birth: '',
+    firstName: '',
+    lastName: '',
+    dateOfBirth: '',
     phone: '',
-    address: '',
-    
+    role: 'customer',
+    // Address fields
+    street: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    country: '',
     // Employee specific fields
     position: '',
     department: '',
-    hire_date: '',
+    hireDate: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
-      [name]: value,
+      [name]: value
     }));
   };
 
@@ -68,7 +71,7 @@ const Register = () => {
 
     // Validate required fields based on role
     if (formData.role === 'employee') {
-      if (!formData.position || !formData.department || !formData.hire_date) {
+      if (!formData.position || !formData.department || !formData.hireDate) {
         setError('Please fill in all required employee fields');
         return;
       }
@@ -212,10 +215,10 @@ const Register = () => {
                 <TextField
                   required
                   fullWidth
-                  id="first_name"
+                  id="firstName"
                   label="First Name"
-                  name="first_name"
-                  value={formData.first_name}
+                  name="firstName"
+                  value={formData.firstName}
                   onChange={handleChange}
                 />
               </Grid>
@@ -223,10 +226,10 @@ const Register = () => {
                 <TextField
                   required
                   fullWidth
-                  id="last_name"
+                  id="lastName"
                   label="Last Name"
-                  name="last_name"
-                  value={formData.last_name}
+                  name="lastName"
+                  value={formData.lastName}
                   onChange={handleChange}
                 />
               </Grid>
@@ -234,11 +237,11 @@ const Register = () => {
                 <TextField
                   required
                   fullWidth
-                  id="date_of_birth"
+                  id="dateOfBirth"
                   label="Date of Birth"
-                  name="date_of_birth"
+                  name="dateOfBirth"
                   type="date"
-                  value={formData.date_of_birth}
+                  value={formData.dateOfBirth}
                   onChange={handleChange}
                   InputLabelProps={{
                     shrink: true,
@@ -258,12 +261,50 @@ const Register = () => {
               <Grid item xs={12}>
                 <TextField
                   fullWidth
-                  id="address"
-                  label="Address"
-                  name="address"
-                  multiline
-                  rows={2}
-                  value={formData.address}
+                  id="street"
+                  label="Street"
+                  name="street"
+                  value={formData.street}
+                  onChange={handleChange}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  id="city"
+                  label="City"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  id="state"
+                  label="State"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  id="postalCode"
+                  label="Postal Code"
+                  name="postalCode"
+                  value={formData.postalCode}
+                  onChange={handleChange}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  id="country"
+                  label="Country"
+                  name="country"
+                  value={formData.country}
                   onChange={handleChange}
                 />
               </Grid>
@@ -305,11 +346,11 @@ const Register = () => {
                     <TextField
                       required
                       fullWidth
-                      id="hire_date"
+                      id="hireDate"
                       label="Hire Date"
-                      name="hire_date"
+                      name="hireDate"
                       type="date"
-                      value={formData.hire_date}
+                      value={formData.hireDate}
                       onChange={handleChange}
                       InputLabelProps={{
                         shrink: true,

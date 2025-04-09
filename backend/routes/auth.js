@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const mysql = require('mysql2/promise');
+// const bcrypt = require('bcrypt');
 
 // Database connection
 const pool = mysql.createPool({
@@ -17,18 +18,18 @@ const pool = mysql.createPool({
 
 // Register user
 router.post('/register', [
-  body('username').trim().isLength({ min: 3 }).escape(),
-  body('email').isEmail().normalizeEmail(),
+  body('username').notEmpty().trim(),
+  body('email').isEmail(),
   body('password').isLength({ min: 6 }),
-  body('role').isIn(['customer', 'employee']),
-  body('first_name').trim().notEmpty().escape(),
-  body('last_name').trim().notEmpty().escape(),
-  body('date_of_birth').isDate(),
-  body('phone').optional().trim().escape(),
-  body('address').optional().trim().escape(),
-  body('position').if(body('role').equals('employee')).notEmpty().escape(),
-  body('department').if(body('role').equals('employee')).notEmpty().escape(),
-  body('hire_date').if(body('role').equals('employee')).isDate()
+  body('firstName').notEmpty().trim(),
+  body('lastName').notEmpty().trim(),
+  body('dateOfBirth').isDate(),
+  body('phone').notEmpty().trim(),
+  body('street').notEmpty().trim(),
+  body('city').notEmpty().trim(),
+  body('state').notEmpty().trim(),
+  body('postalCode').notEmpty().trim(),
+  body('country').notEmpty().trim()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -36,70 +37,67 @@ router.post('/register', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { 
-      username, 
-      email, 
-      password, 
-      role, 
-      first_name, 
-      last_name, 
-      date_of_birth, 
-      phone, 
-      address,
-      position,
-      department,
-      hire_date
+    const {
+      username,
+      email,
+      password,
+      firstName,
+      lastName,
+      dateOfBirth,
+      phone,
+      street,
+      city,
+      state,
+      postalCode,
+      country
     } = req.body;
-
-    // Check if user already exists
-    const [existingUsers] = await pool.execute(
-      'SELECT * FROM users WHERE username = ? OR email = ?',
-      [username, email]
-    );
-
-    if (existingUsers.length > 0) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
 
     // Start transaction
     const connection = await pool.getConnection();
     await connection.beginTransaction();
 
     try {
-      // Insert new user with plain text password
-      const [userResult] = await connection.execute(
-        'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
-        [username, email, password, role]
+      // Check if username or email already exists
+      const [existingUsers] = await connection.query(
+        'SELECT * FROM users WHERE username = ? OR email = ?',
+        [username, email]
       );
 
-      const userId = userResult.insertId;
-
-      // Create profile based on role
-      if (role === 'customer') {
-        await connection.execute(
-          'INSERT INTO customers (user_id, first_name, last_name, date_of_birth, phone, address, email) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [userId, first_name, last_name, date_of_birth, phone, address, email]
-        );
-      } else if (role === 'employee') {
-        await connection.execute(
-          'INSERT INTO employees (user_id, first_name, last_name, date_of_birth, phone, address, email, position, department, hire_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [userId, first_name, last_name, date_of_birth, phone, address, email, position, department, hire_date]
-        );
+      if (existingUsers.length > 0) {
+        return res.status(400).json({ error: 'Username or email already exists' });
       }
+
+      // Create address
+      const [addressResult] = await connection.query(
+        'INSERT INTO addresses (street, city, state, postal_code, country) VALUES (?, ?, ?, ?, ?)',
+        [street, city, state, postalCode, country]
+      );
+
+      // Create user
+      // const hashedPassword = await bcrypt.hash(password, 10);
+      const [userResult] = await connection.query(
+        'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
+        [username, email, password, 'customer']
+      );
+
+      // Create customer
+      await connection.query(
+        'INSERT INTO customers (user_id, first_name, last_name, date_of_birth, address_id, phone, email) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [userResult.insertId, firstName, lastName, dateOfBirth, addressResult.insertId, phone, email]
+      );
 
       await connection.commit();
 
-      // Create JWT token
+      // Generate JWT token
       const token = jwt.sign(
-        { userId, role },
+        { id: userResult.insertId, role: 'customer' },
         process.env.JWT_SECRET,
-        { expiresIn: '1h' }
+        { expiresIn: '24h' }
       );
 
       res.status(201).json({
-        message: 'User registered successfully',
-        token,
-        user: { id: userId, username, email, role }
+        message: 'Customer registered successfully',
+        token
       });
     } catch (error) {
       await connection.rollback();
@@ -108,8 +106,8 @@ router.post('/register', [
       connection.release();
     }
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Error registering customer:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
