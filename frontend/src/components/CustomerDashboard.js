@@ -32,6 +32,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { jwtDecode } from 'jwt-decode';
 
 const CustomerDashboard = () => {
+  const my_user = JSON.parse(localStorage.getItem('user'));
+const my_user_id = my_user.id;
   const navigate = useNavigate();
   const { user } = useAuth();
   const [accounts, setAccounts] = useState([]);
@@ -76,32 +78,30 @@ const CustomerDashboard = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          console.log('No token found, redirecting to login');
           navigate('/login');
           return;
         }
 
         const decoded = jwtDecode(token);
-        console.log('Decoded token:', decoded);
 
-        if (!decoded.userId && !decoded.id) {
+        if (!my_user_id ) {
           console.log('Invalid token payload, redirecting to login');
           localStorage.removeItem('token');
           navigate('/login');
           return;
         }
 
-        console.log('Fetching customer data for user:', decoded.userId);
 
-        const response = await axios.get(`http://localhost:5000/api/customers/${decoded.userId}`, {
+        const response = await axios.get(`http://localhost:5000/api/customers/${my_user_id}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
-
+      
+        
         if (response.data) {
-          console.log('Customer data received:', response.data);
-          setCustomer(response.data[0]);
+          // Set the customer data directly from the response
+          setCustomer(response.data);
           setLoading(false);
         }
       } catch (error) {
@@ -147,28 +147,29 @@ const CustomerDashboard = () => {
       }));
       setAccounts(accountsWithNumberBalance);
 
-      // Only fetch loans if we have customer data
-      console.log("here"+customer);
-      if (customer) {
-        const loansResponse = await axios.get(`http://localhost:5000/api/loans/customer/${customer.id}`, {
+      // Fetch customer data if not already available
+      if (!customer) {
+        const decoded = jwtDecode(token);
+        const customerResponse = await axios.get(`http://localhost:5000/api/customers/${my_user_id}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
-        console.log(loansResponse);
-        // Format the loans data to match the expected structure
-        const formattedLoans = loansResponse.data.map(loan => ({
-          id: loan.id,
-          loan_type: loan.loanType,
-          amount: loan.amount,
-          interest_rate: loan.interestRate,
-          duration: loan.duration,
-          monthly_payment: loan.monthlyPayment,
-          status: loan.status,
-          created_at: loan.createdAt,
-          product: loan.product
-        }));
-        setLoans(formattedLoans);
+        if (customerResponse.data) {
+          setCustomer(customerResponse.data);
+        }
+      }
+
+      // Fetch loans for the current customer
+      
+      if (customer) {
+        const loansResponse = await axios.get(`http://localhost:5000/api/loans/customer/${my_user_id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+    
+        setLoans(loansResponse.data);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -196,21 +197,54 @@ const CustomerDashboard = () => {
   const handleCreateAccount = async () => {
     try {
       const token = localStorage.getItem('token');
+      const decoded = jwtDecode(token);
       
-      const response = await axios.post('http://localhost:5000/api/accounts', newAccountData, {
+      // First, ensure we have customer datac
+      console.log("decoded",decoded);
+      if (!customer) {
+        // Fetch customer data first
+        const customerResponse = await axios.get(`http://localhost:5000/api/customers/${my_user_id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        if (!customerResponse.data) {
+          setError('Customer profile not found. Please try logging in again.');
+          return;
+        }
+        setCustomer(customerResponse.data);
+      }
+
+      // Create the account
+      const response = await axios.post('http://localhost:5000/api/accounts', {
+        ...newAccountData,
+        customer_id: customer.id
+      }, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
-      setAccounts([...accounts, response.data]);
+      // Refresh accounts data
+      const accountsResponse = await axios.get('http://localhost:5000/api/accounts', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const accountsWithNumberBalance = accountsResponse.data.map(account => ({
+        ...account,
+        balance: parseFloat(account.balance) || 0
+      }));
+      setAccounts(accountsWithNumberBalance);
+      
       setOpenNewAccount(false);
       setNewAccountData({
         account_type: 'savings',
         initial_deposit: '',
       });
     } catch (error) {
-      setError('Failed to create account');
+      console.error('Error creating account:', error);
+      setError(error.response?.data?.message || 'Failed to create account');
     }
   };
 
@@ -243,7 +277,7 @@ const CustomerDashboard = () => {
 
     try {
       const formData = {
-        customerId: parseInt(customer.id),
+        customerId: my_user_id,
         loanType: selectedLoanProduct.loan_type,
         amount: parseFloat(newLoanData.amount),
         duration: parseInt(newLoanData.duration),
@@ -489,8 +523,57 @@ const CustomerDashboard = () => {
 
   if (!customer) {
     return (
-      <Container>
-        <Typography>No customer data found</Typography>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h4" gutterBottom>
+            Welcome to Your Banking Dashboard
+          </Typography>
+          <Typography variant="body1" paragraph>
+            It looks like you don't have any accounts yet. Let's get you started by creating your first account!
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            size="large"
+            onClick={() => setOpenNewAccount(true)}
+            sx={{ mt: 2 }}
+          >
+            Create Your First Account
+          </Button>
+        </Paper>
+
+        <Dialog open={openNewAccount} onClose={() => setOpenNewAccount(false)}>
+          <DialogTitle>Create New Account</DialogTitle>
+          <DialogContent>
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel>Account Type</InputLabel>
+              <Select
+                name="account_type"
+                value={newAccountData.account_type}
+                onChange={handleChange}
+                label="Account Type"
+              >
+                <MenuItem value="savings">Savings</MenuItem>
+                <MenuItem value="current">Current</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              margin="normal"
+              label="Initial Deposit"
+              type="number"
+              name="initial_deposit"
+              value={newAccountData.initial_deposit}
+              onChange={handleChange}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenNewAccount(false)}>Cancel</Button>
+            <Button onClick={handleCreateAccount} variant="contained">
+              Create
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     );
   }
@@ -789,24 +872,24 @@ const CustomerDashboard = () => {
                   <Card>
                     <CardContent>
                       <Typography variant="h6" gutterBottom>
-                        {loan.loan_type.charAt(0).toUpperCase() + loan.loan_type.slice(1)} Loan
+                        {loan?.loanType ? loan.loanType.charAt(0).toUpperCase() + loan.loanType.slice(1) : 'Unknown'} Loan
                       </Typography>
                       <Typography color="textSecondary">
-                        Amount: ${parseFloat(loan.amount).toLocaleString()}
+                        Amount: ${loan?.amount ? parseFloat(loan.amount).toLocaleString() : '0.00'}
                       </Typography>
                       <Typography color="textSecondary">
-                        Interest Rate: {loan.interest_rate}%
+                        Interest Rate: {loan?.interestRate ? loan.interestRate : '0'}%
                       </Typography>
                       <Typography color="textSecondary">
-                        Duration: {loan.duration} months
+                        Duration: {loan?.duration ? loan.duration : '0'} months
                       </Typography>
                       <Typography color="textSecondary">
-                        Monthly Payment: ${parseFloat(loan.monthly_payment).toLocaleString()}
+                        Monthly Payment: ${loan?.monthlyPayment ? parseFloat(loan.monthlyPayment).toLocaleString() : '0.00'}
                       </Typography>
                       <Typography color="textSecondary">
-                        Status: {loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}
+                        Status: {loan?.status ? loan.status.charAt(0).toUpperCase() + loan.status.slice(1) : 'Unknown'}
                       </Typography>
-                      {loan.product && (
+                      {loan?.product && (
                         <>
                           <Typography color="textSecondary">
                             Product: {loan.product.name}
@@ -848,7 +931,7 @@ const CustomerDashboard = () => {
                     </MenuItem>
                     {loanProducts.map((product) => (
                       <MenuItem key={product.id} value={product.id}>
-                        {product.name} - {product.loan_type.charAt(0).toUpperCase() + product.loan_type.slice(1)}
+                        {product.name} - {product.loan_type?.charAt(0).toUpperCase() + product.loan_type.slice(1)}
                       </MenuItem>
                     ))}
                   </Select>

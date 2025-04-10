@@ -70,9 +70,10 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
+      console.error('Registration error:', error);
       return {
         success: false,
-        error: error.response?.data?.message || 'Registration failed',
+        error: error.response?.data?.message || 'Registration failed'
       };
     }
   };

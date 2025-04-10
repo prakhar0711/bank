@@ -76,7 +76,7 @@ router.get('/customer/:customerId', authenticateToken, async (req, res) => {
              lp.interest_rate as product_interest_rate
       FROM loans l
       LEFT JOIN loan_products lp ON l.loan_product_id = lp.id
-      WHERE l.customer_id = 4
+      WHERE l.customer_id = ?
       ORDER BY l.created_at DESC
     `, [customerId]);
 
@@ -121,7 +121,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 
     // Check if user is admin or the loan owner
-    if (req.user.role !== 'admin' && req.user.userId !== loans[0].customer_id) {
+    if (req.user.role !== 'customer' && req.user.userId !== loans[0].customer_id) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -150,7 +150,7 @@ router.get('/:id/payments', authenticateToken, async (req, res) => {
     const loan = loans[0];
 
     // Check if user is admin or the loan owner
-    if (req.user.role !== 'admin' && req.user.userId !== loan.customer_id) {
+    if (req.user.role !== 'customer' && req.user.userId !== loan.customer_id) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -232,7 +232,7 @@ router.post('/', [
     const { customerId, loanType, amount, interestRate, duration, monthlyPayment, loan_product_id } = req.body;
 
     // Check if user is admin or the customer themselves
-    if (req.user.role !== 'admin' && req.user.userId !== customerId) {
+    if (req.user.role !== 'customer' && req.user.userId !== customerId) {
       console.log('Access denied for user:', req.user.userId, 'customer:', customerId);
       return res.status(403).json({ message: 'Access denied' });
     }

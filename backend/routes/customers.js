@@ -334,7 +334,7 @@ router.get('/me', authenticateToken, async (req, res) => {
       SELECT c.*, a.street, a.city, a.state, a.postal_code, a.country
       FROM customers c
       LEFT JOIN addresses a ON c.address_id = a.id
-      WHERE c.user_id = ?
+      WHERE c.id = ?
     `, [req.user.id]);
 
     if (!customer) {

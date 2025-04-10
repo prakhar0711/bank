@@ -56,39 +56,43 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
-    // Validate passwords match
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    // Validate password length
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return;
-    }
-
-    // Validate required fields based on role
-    if (formData.role === 'employee') {
-      if (!formData.position || !formData.department || !formData.hireDate) {
-        setError('Please fill in all required employee fields');
-        return;
-      }
-    }
-
     setLoading(true);
 
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { confirmPassword, ...registerData } = formData;
-      const result = await register(registerData);
-      
+      const result = await register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        dateOfBirth: formData.dateOfBirth,
+        phone: formData.phone,
+        role: formData.role,
+        // Address data
+        street: formData.street,
+        city: formData.city,
+        state: formData.state,
+        postalCode: formData.postalCode,
+        country: formData.country,
+        // Employee data
+        position: formData.position,
+        department: formData.department,
+        hireDate: formData.hireDate
+      });
+
       if (result.success) {
-        navigate('/');
+        navigate('/login');
       } else {
-        setError(result.error);
+        setError(result.error || 'Registration failed');
       }
     } catch (err) {
+      console.error('Registration error:', err);
       setError('An error occurred during registration');
     } finally {
       setLoading(false);
@@ -96,63 +100,37 @@ const Register = () => {
   };
 
   return (
-    <Container maxWidth="md">
-      <Box
-        sx={{
-          marginTop: 8,
-          marginBottom: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            padding: 4,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            width: '100%',
-          }}
-        >
-          <Typography component="h1" variant="h5">
+    <Container component="main" maxWidth="sm">
+      <Box sx={{ mt: 8, mb: 4 }}>
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Typography component="h1" variant="h5" align="center" gutterBottom>
             Register
           </Typography>
           {error && (
-            <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
+            <Alert severity="error" sx={{ mb: 2 }}>
               {error}
             </Alert>
           )}
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
+          <Box component="form" onSubmit={handleSubmit} noValidate>
             <Grid container spacing={2}>
-              {/* Account Information */}
               <Grid item xs={12}>
-                <Typography variant="h6" gutterBottom>
-                  Account Information
-                </Typography>
-              </Grid>
-              <Grid item xs={12} sm={6}>
                 <TextField
                   required
                   fullWidth
                   id="username"
                   label="Username"
                   name="username"
-                  autoComplete="username"
-                  autoFocus
                   value={formData.username}
                   onChange={handleChange}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <TextField
                   required
                   fullWidth
                   id="email"
                   label="Email Address"
                   name="email"
-                  autoComplete="email"
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
@@ -166,7 +144,6 @@ const Register = () => {
                   label="Password"
                   type="password"
                   id="password"
-                  autoComplete="new-password"
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -179,7 +156,6 @@ const Register = () => {
                   label="Confirm Password"
                   type="password"
                   id="confirmPassword"
-                  autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                 />
@@ -243,13 +219,12 @@ const Register = () => {
                   type="date"
                   value={formData.dateOfBirth}
                   onChange={handleChange}
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
+                  InputLabelProps={{ shrink: true }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  required
                   fullWidth
                   id="phone"
                   label="Phone Number"
@@ -258,11 +233,23 @@ const Register = () => {
                   onChange={handleChange}
                 />
               </Grid>
+
+              <Grid item xs={12}>
+                <Divider sx={{ my: 2 }} />
+              </Grid>
+
+              {/* Address Information */}
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>
+                  Address Information
+                </Typography>
+              </Grid>
               <Grid item xs={12}>
                 <TextField
+                  required
                   fullWidth
                   id="street"
-                  label="Street"
+                  label="Street Address"
                   name="street"
                   value={formData.street}
                   onChange={handleChange}
@@ -270,6 +257,7 @@ const Register = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  required
                   fullWidth
                   id="city"
                   label="City"
@@ -280,9 +268,10 @@ const Register = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  required
                   fullWidth
                   id="state"
-                  label="State"
+                  label="State/Province"
                   name="state"
                   value={formData.state}
                   onChange={handleChange}
@@ -290,6 +279,7 @@ const Register = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  required
                   fullWidth
                   id="postalCode"
                   label="Postal Code"
@@ -300,6 +290,7 @@ const Register = () => {
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
+                  required
                   fullWidth
                   id="country"
                   label="Country"
@@ -342,7 +333,7 @@ const Register = () => {
                       onChange={handleChange}
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid item xs={12}>
                     <TextField
                       required
                       fullWidth
@@ -352,9 +343,7 @@ const Register = () => {
                       type="date"
                       value={formData.hireDate}
                       onChange={handleChange}
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
+                      InputLabelProps={{ shrink: true }}
                     />
                   </Grid>
                 </>

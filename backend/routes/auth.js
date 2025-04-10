@@ -49,7 +49,11 @@ router.post('/register', [
       city,
       state,
       postalCode,
-      country
+      country,
+      role,
+      position,
+      department,
+      hireDate
     } = req.body;
 
     // Start transaction
@@ -74,30 +78,44 @@ router.post('/register', [
       );
 
       // Create user
-      // const hashedPassword = await bcrypt.hash(password, 10);
       const [userResult] = await connection.query(
         'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
-        [username, email, password, 'customer']
+        [username, email, password, role || 'customer']
       );
 
-      // Create customer
-      await connection.query(
-        'INSERT INTO customers (user_id, first_name, last_name, date_of_birth, address_id, phone, email) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [userResult.insertId, firstName, lastName, dateOfBirth, addressResult.insertId, phone, email]
-      );
+      if (role === 'employee') {
+        // Create employee
+        await connection.query(
+          'INSERT INTO employees (user_id, first_name, last_name, date_of_birth, address_id, phone, email, position, department, hire_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [userResult.insertId, firstName, lastName, dateOfBirth, addressResult.insertId, phone, email, position, department, hireDate]
+        );
+      } else {
+        // Create customer
+        await connection.query(
+          'INSERT INTO customers (user_id, first_name, last_name, date_of_birth, address_id, phone, email) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [userResult.insertId, firstName, lastName, dateOfBirth, addressResult.insertId, phone, email]
+        );
+      }
 
       await connection.commit();
 
       // Generate JWT token
       const token = jwt.sign(
-        { id: userResult.insertId, role: 'customer' },
+        { id: userResult.insertId, role: role || 'customer' },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
 
       res.status(201).json({
-        message: 'Customer registered successfully',
-        token
+        success: true,
+        message: 'User registered successfully',
+        token,
+        user: {
+          id: userResult.insertId,
+          username,
+          email,
+          role: role || 'customer'
+        }
       });
     } catch (error) {
       await connection.rollback();
@@ -106,7 +124,7 @@ router.post('/register', [
       connection.release();
     }
   } catch (error) {
-    console.error('Error registering customer:', error);
+    console.error('Error registering user:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -141,9 +159,27 @@ router.post('/login', [
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Create JWT token
+    // If user is a customer, get their customer ID
+    let customerId = null;
+    if (user.role === 'customer') {
+      const [customers] = await pool.execute(
+        'SELECT id FROM customers WHERE user_id = ?',
+        [user.id]
+      );
+      if (customers.length > 0) {
+        customerId = customers[0].id;
+      }
+    }
+
+    // Create JWT token with customer ID for customers
+    const tokenPayload = {
+      id: user.role === 'customer' ? customerId : user.id,
+      userId: user.id,
+      role: user.role
+    };
+
     const token = jwt.sign(
-      { userId: user.id, role: user.role },
+      tokenPayload,
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
@@ -151,7 +187,8 @@ router.post('/login', [
     res.json({
       token,
       user: {
-        id: user.id,
+        id: tokenPayload.id,
+        userId: user.id,
         username: user.username,
         email: user.email,
         role: user.role
