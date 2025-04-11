@@ -82,18 +82,25 @@ class UserService {
                 };
             }
 
+            // Get the registration message
+            const [messages] = await db.query(
+                'SELECT message_type, message FROM registration_messages WHERE user_id = ? ORDER BY created_at DESC LIMIT 1',
+                [userId]
+            );
+
             return {
                 success: true,
                 userId,
                 customerId,
                 employeeId,
-                message
+                message: messages[0]?.message || 'Registration successful',
+                messageType: messages[0]?.message_type || 'success'
             };
         } catch (error) {
             console.error('Registration error:', error);
             return {
                 success: false,
-                error: 'Registration failed due to database error'
+                error: error.message || 'Registration failed due to database error'
             };
         }
     }

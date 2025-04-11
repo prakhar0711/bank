@@ -11,6 +11,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState(null);
+  const [messageType, setMessageType] = useState(null);
 
   useEffect(() => {
     // Check if user is logged in
@@ -25,6 +27,15 @@ export const AuthProvider = ({ children }) => {
     
     setLoading(false);
   }, []);
+
+  const showMessage = (msg, type) => {
+    setMessage(msg);
+    setMessageType(type);
+    setTimeout(() => {
+      setMessage(null);
+      setMessageType(null);
+    }, 5000);
+  };
 
   const login = async (username, password) => {
     try {
@@ -57,7 +68,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await axios.post('http://localhost:5000/api/auth/register', userData);
       
-      const { token, user } = response.data;
+      const { token, user, message, messageType } = response.data;
       
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
@@ -68,12 +79,15 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       setIsAuthenticated(true);
       
+      showMessage(message, messageType);
+      
       return { success: true };
     } catch (error) {
-      console.error('Registration error:', error);
+      const errorMessage = error.response?.data?.error || 'Registration failed';
+      showMessage(errorMessage, 'error');
       return {
         success: false,
-        error: error.response?.data?.message || 'Registration failed'
+        error: errorMessage
       };
     }
   };
@@ -95,6 +109,8 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    message,
+    messageType,
   };
 
   return (

@@ -12,6 +12,7 @@ import AccountDetails from './components/AccountDetails';
 import Transactions from './components/Transactions';
 import LoanDetails from './components/LoanDetails';
 import LoanProducts from './components/LoanProducts';
+import MessagePopup from './components/MessagePopup';
 
 const theme = createTheme({
   palette: {
@@ -54,6 +55,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
+        <MessagePopup />
         <Navbar />
         <Routes>
           <Route path="/login" element={<Login />} />
