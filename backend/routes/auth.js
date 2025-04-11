@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const UserService = require('../services/userService');
 const { body, validationResult } = require('express-validator');
 const mysql = require('mysql2/promise');
 // const bcrypt = require('bcrypt');
@@ -16,117 +17,99 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
-// Register user
+// Register new user
 router.post('/register', [
-  body('username').notEmpty().trim(),
-  body('email').isEmail(),
-  body('password').isLength({ min: 6 }),
-  body('firstName').notEmpty().trim(),
-  body('lastName').notEmpty().trim(),
-  body('dateOfBirth').isDate(),
-  body('phone').notEmpty().trim(),
-  body('street').notEmpty().trim(),
-  body('city').notEmpty().trim(),
-  body('state').notEmpty().trim(),
-  body('postalCode').notEmpty().trim(),
-  body('country').notEmpty().trim()
+    body('username').isLength({ min: 3 }).trim().escape(),
+    body('email').isEmail().normalizeEmail(),
+    body('password').isLength({ min: 6 }),
+    body('firstName').notEmpty().trim().escape(),
+    body('lastName').notEmpty().trim().escape(),
+    body('dateOfBirth').isDate(),
+    body('street').notEmpty().trim().escape(),
+    body('city').notEmpty().trim().escape(),
+    body('state').notEmpty().trim().escape(),
+    body('postalCode').notEmpty().trim().escape(),
+    body('country').notEmpty().trim().escape(),
+    body('phone').notEmpty().trim().escape(),
+    body('role').isIn(['customer', 'employee']),
+    body('position').if(body('role').equals('employee')).notEmpty().trim().escape(),
+    body('department').if(body('role').equals('employee')).notEmpty().trim().escape(),
+    body('hireDate').if(body('role').equals('employee')).isDate()
 ], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const {
-      username,
-      email,
-      password,
-      firstName,
-      lastName,
-      dateOfBirth,
-      phone,
-      street,
-      city,
-      state,
-      postalCode,
-      country,
-      role,
-      position,
-      department,
-      hireDate
-    } = req.body;
-
-    // Start transaction
-    const connection = await pool.getConnection();
-    await connection.beginTransaction();
-
     try {
-      // Check if username or email already exists
-      const [existingUsers] = await connection.query(
-        'SELECT * FROM users WHERE username = ? OR email = ?',
-        [username, email]
-      );
-
-      if (existingUsers.length > 0) {
-        return res.status(400).json({ error: 'Username or email already exists' });
-      }
-
-      // Create address
-      const [addressResult] = await connection.query(
-        'INSERT INTO addresses (street, city, state, postal_code, country) VALUES (?, ?, ?, ?, ?)',
-        [street, city, state, postalCode, country]
-      );
-
-      // Create user
-      const [userResult] = await connection.query(
-        'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
-        [username, email, password, role || 'customer']
-      );
-
-      if (role === 'employee') {
-        // Create employee
-        await connection.query(
-          'INSERT INTO employees (user_id, first_name, last_name, date_of_birth, address_id, phone, email, position, department, hire_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [userResult.insertId, firstName, lastName, dateOfBirth, addressResult.insertId, phone, email, position, department, hireDate]
-        );
-      } else {
-        // Create customer
-        await connection.query(
-          'INSERT INTO customers (user_id, first_name, last_name, date_of_birth, address_id, phone, email) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          [userResult.insertId, firstName, lastName, dateOfBirth, addressResult.insertId, phone, email]
-        );
-      }
-
-      await connection.commit();
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { id: userResult.insertId, role: role || 'customer' },
-        process.env.JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      res.status(201).json({
-        success: true,
-        message: 'User registered successfully',
-        token,
-        user: {
-          id: userResult.insertId,
-          username,
-          email,
-          role: role || 'customer'
+        // Validate input
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
         }
-      });
+
+        const {
+            username,
+            email,
+            password,
+            role,
+            firstName,
+            lastName,
+            dateOfBirth,
+            street,
+            city,
+            state,
+            postalCode,
+            country,
+            phone,
+            position,
+            department,
+            hireDate
+        } = req.body;
+
+      
+
+        // Register user using UserService
+        const result = await UserService.registerUser({
+            username,
+            email,
+            password,
+            role,
+            firstName,
+            lastName,
+            dateOfBirth,
+            street,
+            city,
+            state,
+            postalCode,
+            country,
+            phone,
+            position,
+            department,
+            hireDate
+        });
+
+        if (!result.success) {
+            return res.status(400).json({ error: result.error });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { userId: result.userId, role },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        res.status(201).json({
+            message: result.message,
+            token,
+            user: {
+                id: result.userId,
+                username,
+                email,
+                role,
+                customerId: result.customerId,
+                employeeId: result.employeeId
+            }
+        });
     } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
+        res.status(500).json({ error: 'Registration failed' });
     }
-  } catch (error) {
-    console.error('Error registering user:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
 });
 
 // Login user
