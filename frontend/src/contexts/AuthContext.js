@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState(null);
+  const [messageOpen, setMessageOpen] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in
@@ -31,10 +32,14 @@ export const AuthProvider = ({ children }) => {
   const showMessage = (msg, type) => {
     setMessage(msg);
     setMessageType(type);
-    setTimeout(() => {
-      setMessage(null);
-      setMessageType(null);
-    }, 5000);
+    setMessageOpen(true);
+  };
+
+  const handleCloseMessage = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setMessageOpen(false);
   };
 
   const login = async (username, password) => {
@@ -111,6 +116,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     message,
     messageType,
+    messageOpen,
+    handleCloseMessage,
   };
 
   return (

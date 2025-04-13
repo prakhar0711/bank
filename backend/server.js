@@ -31,7 +31,6 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/accounts', require('./routes/accounts'));
 app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/customers', require('./routes/customers'));
-app.use('/api/cards', require('./routes/cards'));
 app.use('/api/loans', require('./routes/loans'));
 app.use('/api/loan_products', require('./routes/loan_products'));
 
