@@ -44,18 +44,48 @@ router.get('/', authenticateToken, async (req, res) => {
     // First get all customers with their basic info and address
     const [customers] = await pool.execute(`
       SELECT 
-        c.*, 
-        u.username, 
-        u.email, 
-        u.role,
-        a.street,
-        a.city,
-        a.state,
-        a.postal_code,
-        a.country
+        c.*,
+        (
+          SELECT u.username
+          FROM users u
+          WHERE u.id = c.user_id
+        ) as username,
+        (
+          SELECT u.email
+          FROM users u
+          WHERE u.id = c.user_id
+        ) as email,
+        (
+          SELECT u.role
+          FROM users u
+          WHERE u.id = c.user_id
+        ) as role,
+        (
+          SELECT a.street
+          FROM addresses a
+          WHERE a.id = c.address_id
+        ) as street,
+        (
+          SELECT a.city
+          FROM addresses a
+          WHERE a.id = c.address_id
+        ) as city,
+        (
+          SELECT a.state
+          FROM addresses a
+          WHERE a.id = c.address_id
+        ) as state,
+        (
+          SELECT a.postal_code
+          FROM addresses a
+          WHERE a.id = c.address_id
+        ) as postal_code,
+        (
+          SELECT a.country
+          FROM addresses a
+          WHERE a.id = c.address_id
+        ) as country
       FROM customers c
-      JOIN users u ON c.user_id = u.id
-      JOIN addresses a ON c.address_id = a.id
       ORDER BY c.created_at DESC
     `);
 
