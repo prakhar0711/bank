@@ -43,12 +43,6 @@ INSERT INTO transactions (account_id, transaction_type, amount, description, sta
 (1, 'transfer', 500.00, 'Transfer to savings', 'completed', '2024-01-04 14:00:00'),
 (2, 'withdrawal', 200.00, 'Grocery shopping', 'completed', '2024-01-05 15:00:00');
 
--- Insert dummy cards
-INSERT INTO cards (account_id, card_number, card_type, expiry_date, cvv, status, created_at) VALUES
-(1, '1234567890123456', 'debit', '2025-12-31', '123', 'active', '2024-01-01 10:40:00'),
-(2, '2345678901234567', 'debit', '2025-12-31', '234', 'active', '2024-01-01 10:45:00'),
-(3, '3456789012345678', 'credit', '2025-12-31', '345', 'active', '2024-01-02 11:40:00'),
-(4, '4567890123456789', 'debit', '2025-12-31', '456', 'active', '2024-01-03 12:40:00');
 
 -- Insert dummy loan products
 INSERT INTO loan_products (name, description, loan_type, min_amount, max_amount, min_duration, max_duration, interest_rate, created_by, is_active, created_at) VALUES

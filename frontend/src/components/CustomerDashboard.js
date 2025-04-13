@@ -26,6 +26,7 @@ import {
   RadioGroup,
   FormControlLabel,
   FormLabel,
+  Snackbar,
 } from '@mui/material';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -72,6 +73,9 @@ const my_user_id = my_user.id;
   const [loanSuccess, setLoanSuccess] = useState('');
   const [loanDialogOpen, setLoanDialogOpen] = useState(false);
   const [customer, setCustomer] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('error');
 
   useEffect(() => {
     const initializeData = async () => {
@@ -255,23 +259,58 @@ const my_user_id = my_user.id;
     setSelectedLoanProduct(product);
   };
 
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setSnackbarOpen(false);
+  };
+
+  const showError = (message) => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity('error');
+    setSnackbarOpen(true);
+  };
+
+  const showSuccess = (message) => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity('success');
+    setSnackbarOpen(true);
+  };
+
   const handleLoanSubmit = async (e) => {
     e.preventDefault();
     setLoanError('');
     setLoanSuccess('');
 
     if (!customer) {
-      setLoanError('Customer data not found. Please try again later.');
+      showError('Customer data not found. Please try again later.');
       return;
     }
 
     if (!selectedLoanProduct) {
-      setLoanError('Please select a loan product');
+      showError('Please select a loan product');
       return;
     }
 
     if (!newLoanData.amount || !newLoanData.duration) {
-      setLoanError('Please fill in all required fields');
+      showError('Please fill in all required fields');
+      return;
+    }
+
+    // Convert to numbers for comparison
+    const amount = parseFloat(newLoanData.amount);
+    const duration = parseInt(newLoanData.duration);
+
+    // Validate amount range
+    if (amount < selectedLoanProduct.min_amount || amount > selectedLoanProduct.max_amount) {
+      showError(`Loan amount must be between $${selectedLoanProduct.min_amount.toLocaleString()} and $${selectedLoanProduct.max_amount.toLocaleString()}`);
+      return;
+    }
+
+    // Validate duration range
+    if (duration < selectedLoanProduct.min_duration || duration > selectedLoanProduct.max_duration) {
+      showError(`Loan duration must be between ${selectedLoanProduct.min_duration} and ${selectedLoanProduct.max_duration} months`);
       return;
     }
 
@@ -279,8 +318,8 @@ const my_user_id = my_user.id;
       const formData = {
         customerId: my_user_id,
         loanType: selectedLoanProduct.loan_type,
-        amount: parseFloat(newLoanData.amount),
-        duration: parseInt(newLoanData.duration),
+        amount: amount,
+        duration: duration,
         interestRate: parseFloat(selectedLoanProduct.interest_rate),
         monthlyPayment: parseFloat(newLoanData.amount) / parseInt(newLoanData.duration),
         loan_product_id: parseInt(selectedLoanProduct.id)
@@ -296,7 +335,7 @@ const my_user_id = my_user.id;
 
       console.log('Loan application response:', response.data);
 
-      setLoanSuccess('Loan application submitted successfully!');
+      showSuccess('Loan application submitted successfully!');
       setOpenNewLoan(false);
       setNewLoanData({
         loan_product_id: '',
@@ -307,7 +346,7 @@ const my_user_id = my_user.id;
       fetchData();
     } catch (error) {
       console.error('Error submitting loan application:', error);
-      setLoanError(error.response?.data?.message || 'Failed to submit loan application');
+      showError(error.response?.data?.message || 'Failed to submit loan application');
     }
   };
 
@@ -592,6 +631,22 @@ const my_user_id = my_user.id;
           <Alert severity="error">{error}</Alert>
         </Grid>
       )}
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbarSeverity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
 
       {activeTab === 0 && (
         <>

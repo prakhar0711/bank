@@ -85,19 +85,6 @@ CREATE TABLE IF NOT EXISTS transactions (
     FOREIGN KEY (account_id) REFERENCES accounts(id)
 );
 
--- Cards table
-CREATE TABLE IF NOT EXISTS cards (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    account_id INT,
-    card_number VARCHAR(16) UNIQUE NOT NULL,
-    card_type ENUM('debit', 'credit') NOT NULL,
-    expiry_date DATE NOT NULL,
-    cvv VARCHAR(4) NOT NULL,
-    status ENUM('active', 'inactive', 'blocked') DEFAULT 'active',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (account_id) REFERENCES accounts(id)
-);
 
 -- Loans table
 CREATE TABLE IF NOT EXISTS loans (
