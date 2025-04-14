@@ -141,7 +141,7 @@ const LoanDetails = () => {
             <Box sx={{ mb: 2 }}>
               <Typography color="textSecondary">Amount</Typography>
               <Typography variant="body1">
-                ${parseFloat(loan.amount).toFixed(2)}
+              ₹{parseFloat(loan.amount).toFixed(2)}
               </Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
@@ -165,19 +165,19 @@ const LoanDetails = () => {
             <Box sx={{ mb: 2 }}>
               <Typography color="textSecondary">Monthly Payment</Typography>
               <Typography variant="body1">
-                ${parseFloat(loan.monthly_payment).toFixed(2)}
+              ₹{parseFloat(loan.monthly_payment).toFixed(2)}
               </Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
               <Typography color="textSecondary">Total Interest</Typography>
               <Typography variant="body1">
-                ${parseFloat(loan.amount * loan.interest_rate / 100).toFixed(2)}
+              ₹{parseFloat(loan.amount * loan.interest_rate / 100).toFixed(2)}
               </Typography>
             </Box>
             <Box sx={{ mb: 2 }}>
               <Typography color="textSecondary">Total Amount</Typography>
               <Typography variant="body1">
-                ${parseFloat(loan.amount + (loan.amount * loan.interest_rate / 100)).toFixed(2)}
+              ₹{parseFloat(loan.amount + (loan.amount * loan.interest_rate / 100)).toFixed(2)}
               </Typography>
             </Box>
             {loan.status === 'approved' && (

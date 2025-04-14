@@ -31,6 +31,19 @@ import {
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { jwtDecode } from 'jwt-decode';
+import {
+  AccountBalance as AccountBalanceIcon,
+  Payment as PaymentIcon,
+  Add as AddIcon,
+  Remove as RemoveIcon,
+  TrendingUp as TrendingUpIcon,
+  Description as DescriptionIcon,
+  CalendarToday as CalendarIcon,
+  CurrencyRupee as MoneyIcon,
+  Percent as PercentIcon,
+  CheckCircle as CheckCircleIcon,
+  Close as CloseIcon,
+} from '@mui/icons-material';
 
 const CustomerDashboard = () => {
   const my_user = JSON.parse(localStorage.getItem('user'));
@@ -304,7 +317,7 @@ const my_user_id = my_user.id;
 
     // Validate amount range
     if (amount < selectedLoanProduct.min_amount || amount > selectedLoanProduct.max_amount) {
-      showError(`Loan amount must be between $${selectedLoanProduct.min_amount.toLocaleString()} and $${selectedLoanProduct.max_amount.toLocaleString()}`);
+      showError(`Loan amount must be between ₹${selectedLoanProduct.min_amount.toLocaleString('en-IN')} and ₹${selectedLoanProduct.max_amount.toLocaleString('en-IN')}`);
       return;
     }
 
@@ -544,6 +557,16 @@ const my_user_id = my_user.id;
     }
   };
 
+  // Update any text that shows currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  };
+
   if (loading) {
     return (
       <Container>
@@ -682,7 +705,7 @@ const my_user_id = my_user.id;
                         Type: {(account.account_type ? account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1) : 'Unknown')}
                       </Typography>
                       <Typography variant="h5" sx={{ mt: 2 }}>
-                        Balance: ${(account.balance !== undefined && account.balance !== null) ? parseFloat(account.balance).toFixed(2) : '0.00'}
+                        Balance: ₹{parseFloat(account.balance).toLocaleString('en-IN')}
                       </Typography>
                     </CardContent>
                     <CardActions>
@@ -794,7 +817,7 @@ const my_user_id = my_user.id;
                     </MenuItem>
                     {accounts.map((account) => (
                       <MenuItem key={account.id} value={account.id}>
-                        {(account.account_type ? account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1) : 'Unknown')} Account #{account.account_number} - ${(account.balance !== undefined && account.balance !== null) ? parseFloat(account.balance).toFixed(2) : '0.00'}
+                        {(account.account_type ? account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1) : 'Unknown')} Account #{account.account_number} - ₹{(account.balance !== undefined && account.balance !== null) ? parseFloat(account.balance).toFixed(2) : '0.00'}
                       </MenuItem>
                     ))}
                   </Select>
@@ -861,7 +884,7 @@ const my_user_id = my_user.id;
                     </MenuItem>
                     {accounts.map((account) => (
                       <MenuItem key={account.id} value={account.id}>
-                        {(account.account_type ? account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1) : 'Unknown')} Account #{account.account_number} - ${(account.balance !== undefined && account.balance !== null) ? parseFloat(account.balance).toFixed(2) : '0.00'}
+                        {(account.account_type ? account.account_type.charAt(0).toUpperCase() + account.account_type.slice(1) : 'Unknown')} Account #{account.account_number} - ₹{(account.balance !== undefined && account.balance !== null) ? parseFloat(account.balance).toFixed(2) : '0.00'}
                       </MenuItem>
                     ))}
                   </Select>
@@ -878,7 +901,7 @@ const my_user_id = my_user.id;
                   inputProps={{ min: "0.01", step: "0.01" }}
                   helperText={
                     withdrawData.account_id && withdrawData.amount
-                      ? `Available balance: $${(accounts.find(acc => acc.id === withdrawData.account_id)?.balance !== undefined && accounts.find(acc => acc.id === withdrawData.account_id)?.balance !== null) ? parseFloat(accounts.find(acc => acc.id === withdrawData.account_id).balance).toFixed(2) : '0.00'}`
+                      ? `Available balance: ₹${(accounts.find(acc => acc.id === withdrawData.account_id)?.balance !== undefined && accounts.find(acc => acc.id === withdrawData.account_id)?.balance !== null) ? parseFloat(accounts.find(acc => acc.id === withdrawData.account_id).balance).toFixed(2) : '0.00'}`
                       : ''
                   }
                 />
@@ -930,7 +953,7 @@ const my_user_id = my_user.id;
                         {loan?.loanType ? loan.loanType.charAt(0).toUpperCase() + loan.loanType.slice(1) : 'Unknown'} Loan
                       </Typography>
                       <Typography color="textSecondary">
-                        Amount: ${loan?.amount ? parseFloat(loan.amount).toLocaleString() : '0.00'}
+                        Amount: ₹{loan?.amount ? parseFloat(loan.amount).toLocaleString('en-IN') : '0.00'}
                       </Typography>
                       <Typography color="textSecondary">
                         Interest Rate: {loan?.interestRate ? loan.interestRate : '0'}%
@@ -939,7 +962,7 @@ const my_user_id = my_user.id;
                         Duration: {loan?.duration ? loan.duration : '0'} months
                       </Typography>
                       <Typography color="textSecondary">
-                        Monthly Payment: ${loan?.monthlyPayment ? parseFloat(loan.monthlyPayment).toLocaleString() : '0.00'}
+                        Monthly Payment: ₹{loan?.monthlyPayment ? parseFloat(loan.monthlyPayment).toLocaleString('en-IN') : '0.00'}
                       </Typography>
                       <Typography color="textSecondary">
                         Status: {loan?.status ? loan.status.charAt(0).toUpperCase() + loan.status.slice(1) : 'Unknown'}
@@ -1001,7 +1024,7 @@ const my_user_id = my_user.id;
                       <strong>Interest Rate:</strong> {selectedLoanProduct.interest_rate}%
                     </Typography>
                     <Typography variant="body2" paragraph>
-                      <strong>Amount Range:</strong> ${selectedLoanProduct.min_amount.toLocaleString()} - ${selectedLoanProduct.max_amount.toLocaleString()}
+                      <strong>Amount Range:</strong> ₹{selectedLoanProduct.min_amount.toLocaleString('en-IN')} - ₹{selectedLoanProduct.max_amount.toLocaleString('en-IN')}
                     </Typography>
                     <Typography variant="body2" paragraph>
                       <strong>Duration Range:</strong> {selectedLoanProduct.min_duration} - {selectedLoanProduct.max_duration} months
@@ -1025,7 +1048,7 @@ const my_user_id = my_user.id;
                         max: selectedLoanProduct.max_amount,
                         step: "0.01"
                       }}
-                      helperText={`Amount must be between $${selectedLoanProduct.min_amount.toLocaleString()} and $${selectedLoanProduct.max_amount.toLocaleString()}`}
+                      helperText={`Amount must be between ₹${selectedLoanProduct.min_amount.toLocaleString('en-IN')} and ₹${selectedLoanProduct.max_amount.toLocaleString('en-IN')}`}
                     />
                     
                     <TextField

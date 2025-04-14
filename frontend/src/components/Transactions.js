@@ -50,7 +50,7 @@ const Transactions = () => {
 
   const formatAmount = (amount, type) => {
     const formattedAmount = parseFloat(amount).toFixed(2);
-    return type === 'deposit' ? `+$${formattedAmount}` : `-$${formattedAmount}`;
+    return type === 'deposit' ? `+₹${formattedAmount}` : `-₹${formattedAmount}`;
   };
 
   if (loading) {

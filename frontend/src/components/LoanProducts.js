@@ -37,7 +37,7 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Close as CloseIcon,
-  AttachMoney as MoneyIcon,
+  CurrencyRupee as MoneyIcon,
   CalendarToday as CalendarIcon,
   Percent as PercentIcon,
   Description as DescriptionIcon,
@@ -450,7 +450,7 @@ const LoanProducts = () => {
                           <Box display="flex" alignItems="center">
                             <MoneyIcon sx={{ mr: 1, color: 'primary.main' }} />
                             <Typography>
-                              ${product.min_amount} - ${product.max_amount}
+                            ₹{product.min_amount} - ₹{product.max_amount}
                             </Typography>
                           </Box>
                         </TableCell>

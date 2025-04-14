@@ -30,7 +30,11 @@ const StyledContainer = styled(Container)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  backgroundImage: 'url("/images/bank-background.jpg")',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat',
+  backgroundAttachment: 'fixed',
   padding: theme.spacing(4, 2),
   position: 'fixed',
   top: 0,
@@ -40,6 +44,16 @@ const StyledContainer = styled(Container)(({ theme }) => ({
   width: '100%',
   margin: 0,
   maxWidth: '100% !important',
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+   // background: 'rgba(255, 255, 255, 0.9)',
+    zIndex: 0,
+  },
 }));
 
 const StyledPaper = styled(Paper)(({ theme }) => ({

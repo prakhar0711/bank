@@ -171,7 +171,7 @@ const LoanCard = ({ loan, navigate }) => (
                   Amount
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  ${parseFloat(loan.Amount).toFixed(2)}
+                ₹{parseFloat(loan.Amount).toFixed(2)}
                 </Typography>
               </Box>
             </Box>
@@ -211,7 +211,7 @@ const LoanCard = ({ loan, navigate }) => (
                     Monthly Payment
                   </Typography>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    ${calculateMonthlyPayment(loan.Amount, loan.InterestRate, loan.DurationMonths)}
+                  ₹{calculateMonthlyPayment(loan.Amount, loan.InterestRate, loan.DurationMonths)}
                   </Typography>
                 </Box>
               </Box>
@@ -410,7 +410,7 @@ const Loans = () => {
                   value={newLoanData.amount}
                   onChange={handleChange}
                   InputProps={{
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    startAdornment: <InputAdornment position="start">₹</InputAdornment>,
                   }}
                 />
                 <StyledTextField

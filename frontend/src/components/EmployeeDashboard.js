@@ -48,7 +48,7 @@ import {
   Close as CloseIcon,
   AccountBalance as AccountBalanceIcon,
   CalendarToday as CalendarIcon,
-  AttachMoney as MoneyIcon,
+  CurrencyRupee as MoneyIcon,
   Percent as PercentIcon,
   Description as DescriptionIcon,
   CheckCircle as CheckCircleIcon,
@@ -422,6 +422,16 @@ console.log(response)
     }
   };
 
+  // Update any text that shows currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  };
+
   if (loading) {
     return (
       <Container>
@@ -485,7 +495,7 @@ console.log(response)
                                   <TableCell>
                                     {loan.loan_type.charAt(0).toUpperCase() + loan.loan_type.slice(1)}
                                   </TableCell>
-                                  <TableCell>${parseFloat(loan.amount).toLocaleString()}</TableCell>
+                                  <TableCell>₹{parseFloat(loan.amount).toLocaleString('en-IN')}</TableCell>
                                   <TableCell>{loan.duration} months</TableCell>
                                   <TableCell>
                                     <Chip
@@ -596,7 +606,7 @@ console.log(response)
                           Loan Amount
                         </Typography>
                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                          ${parseFloat(selectedLoan.amount).toLocaleString()}
+                        ₹{parseFloat(selectedLoan.amount).toLocaleString('en-IN')}
                         </Typography>
                       </Box>
                     </FeatureItem>
@@ -803,7 +813,7 @@ console.log(response)
                                     Account Number: {account.account_number}
                                   </Typography>
                                   <Typography variant="body2" color="text.secondary">
-                                    Balance: ${parseFloat(account.balance).toLocaleString()}
+                                    Balance: ₹{parseFloat(account.balance).toLocaleString('en-IN')}
                                   </Typography>
                                   <Typography variant="body2" color="text.secondary">
                                     Status: {account.status.charAt(0).toUpperCase() + account.status.slice(1)}
@@ -842,7 +852,7 @@ console.log(response)
                               secondary={
                                 <>
                                   <Typography variant="body2" color="text.secondary">
-                                    Amount: ${parseFloat(loan.amount).toLocaleString()}
+                                    Amount: ₹{parseFloat(loan.amount).toLocaleString('en-IN')}
                                   </Typography>
                                   <Typography variant="body2" color="text.secondary">
                                     Status: {loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}
@@ -895,7 +905,7 @@ console.log(response)
                                 position: 'left',
                                 title: {
                                   display: true,
-                                  text: 'Amount ($)'
+                                  text: 'Amount (₹)'
                                 }
                               },
                               y1: {
