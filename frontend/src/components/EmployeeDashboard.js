@@ -39,6 +39,7 @@ import {
   LinearProgress,
   IconButton,
   InputAdornment,
+  CircularProgress,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import {
@@ -61,6 +62,29 @@ import {
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import LoanProducts from './LoanProducts';
+import {
+  Line,
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
+import { Line as LineChart } from 'react-chartjs-2';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const StyledContainer = styled(Container)(({ theme }) => ({
   padding: theme.spacing(4),
@@ -99,7 +123,7 @@ const ContentContainer = styled(Box)(({ theme }) => ({
   [theme.breakpoints.up('sm')]: {
     padding: theme.spacing(0, 3),
   },
-}));
+}));  
 
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: '24px',
@@ -229,6 +253,8 @@ const EmployeeDashboard = () => {
   const [openLoanDialog, setOpenLoanDialog] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [openCustomerDialog, setOpenCustomerDialog] = useState(false);
+  const [transactionData, setTransactionData] = useState(null);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -300,9 +326,83 @@ const EmployeeDashboard = () => {
     setOpenLoanDialog(true);
   };
 
-  const handleViewCustomerDetails = (customer) => {
+  const fetchTransactionData = async (customerId) => {
+    try {
+      setLoadingTransactions(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`http://localhost:5000/api/transactions/customer/${customerId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+console.log(response)
+      // Process transaction data for the chart
+      const transactions = response.data;
+      const monthlyData = {};
+      
+      transactions.forEach(transaction => {
+        const date = new Date(transaction.created_at);
+        const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        
+        if (!monthlyData[monthYear]) {
+          monthlyData[monthYear] = {
+            deposits: 0,
+            withdrawals: 0,
+            count: 0
+          };
+        }
+        
+        if (transaction.transaction_type === 'deposit') {
+          monthlyData[monthYear].deposits += parseFloat(transaction.amount);
+        } else if (transaction.transaction_type === 'withdrawal') {
+          monthlyData[monthYear].withdrawals += parseFloat(transaction.amount);
+        }
+        monthlyData[monthYear].count++;
+      });
+
+      // Prepare chart data
+      const labels = Object.keys(monthlyData).sort();
+      const chartData = {
+        labels,
+        datasets: [
+          {
+            label: 'Deposits',
+            data: labels.map(label => monthlyData[label].deposits),
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            tension: 0.1
+          },
+          {
+            label: 'Withdrawals',
+            data: labels.map(label => monthlyData[label].withdrawals),
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+            tension: 0.1
+          },
+          {
+            label: 'Number of Transactions',
+            data: labels.map(label => monthlyData[label].count),
+            borderColor: 'rgb(54, 162, 235)',
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            tension: 0.1,
+            yAxisID: 'y1'
+          }
+        ]
+      };
+
+      setTransactionData(chartData);
+    } catch (error) {
+      console.error('Error fetching transaction data:', error);
+      setError('Failed to fetch transaction data');
+    } finally {
+      setLoadingTransactions(false);
+    }
+  };
+
+  const handleViewCustomerDetails = async (customer) => {
     setSelectedCustomer(customer);
     setOpenCustomerDialog(true);
+    await fetchTransactionData(customer.id);
   };
 
   const getStatusColor = (status) => {
@@ -763,6 +863,62 @@ const EmployeeDashboard = () => {
                         </ListItem>
                       )}
                     </List>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, mt: 3, mb: 2 }}>
+                      Transaction History
+                    </Typography>
+                    {loadingTransactions ? (
+                      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+                        <CircularProgress />
+                      </Box>
+                    ) : transactionData ? (
+                      <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'background.paper' }}>
+                        <LineChart
+                          data={transactionData}
+                          options={{
+                            responsive: true,
+                            plugins: {
+                              legend: {
+                                position: 'top',
+                              },
+                              title: {
+                                display: true,
+                                text: 'Monthly Transaction Summary'
+                              }
+                            },
+                            scales: {
+                              y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                title: {
+                                  display: true,
+                                  text: 'Amount ($)'
+                                }
+                              },
+                              y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: {
+                                  display: true,
+                                  text: 'Number of Transactions'
+                                },
+                                grid: {
+                                  drawOnChartArea: false
+                                }
+                              }
+                            }
+                          }}
+                        />
+                      </Box>
+                    ) : (
+                      <Typography color="text.secondary" align="center">
+                        No transaction data available
+                      </Typography>
+                    )}
                   </Grid>
                 </Grid>
               )}

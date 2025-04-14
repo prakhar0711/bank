@@ -4,6 +4,9 @@ const { body, validationResult } = require('express-validator');
 const mysql = require('mysql2/promise');
 const jwt = require('jsonwebtoken');
 
+
+const auth = require('../middleware/auth');
+
 // Database connection
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
@@ -14,7 +17,7 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0
 });
-
+const db = pool;
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -346,6 +349,57 @@ router.post('/transfer', [
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get all transactions for a specific customer
+router.get('/customer/:customerId', auth, async (req, res) => {
+  try {
+    const { customerId } = req.params;
+    
+    // First verify the customer exists and belongs to the employee's branch
+    const customerQuery = `
+      SELECT c.*
+      FROM customers c
+      JOIN accounts a ON c.id = a.customer_id
+      WHERE c.id = ?
+      LIMIT 1
+    `;
+    const [customerResult] = await pool.query(customerQuery, [customerId]);
+    
+    if (customerResult.length === 0) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+
+    // If the user is not an admin, verify they have access to the customer's branch
+    if (req.user.role !== 'admin') {
+      if (customerResult[0].branch_id !== req.user.branch_id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+
+    // Get all transactions for the customer
+    const transactionsQuery = `
+      SELECT 
+        t.*,
+        a.account_type,
+        a.account_number,
+        CASE 
+          WHEN t.transaction_type = 'deposit' THEN t.amount
+          ELSE -t.amount
+        END as signed_amount
+      FROM transactions t
+      JOIN accounts a ON t.account_id = a.id
+      WHERE a.customer_id = ?
+      ORDER BY t.created_at DESC
+    `;
+    
+    const [transactionsResult] = await pool.query(transactionsQuery, [customerId]);
+    
+    res.json(transactionsResult);
+  } catch (error) {
+    console.error('Error fetching customer transactions:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
